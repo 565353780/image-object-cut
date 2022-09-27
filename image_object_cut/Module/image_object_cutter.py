@@ -13,24 +13,61 @@ from image_object_cut.Method.path import createFileFolder, renameFile
 
 class ImageObjectCutter(object):
 
-    def __init__(self):
+    def __init__(self, color_mode=None, background_image_file_path=None):
+        self.h_range_list = []
+
+        if color_mode is not None:
+            self.setColorMode(color_mode)
+        if background_image_file_path is not None:
+            self.setBackground(background_image_file_path)
         return
+
+    def reset(self):
+        self.h_range_list = []
+        return True
 
     def getColorModeList(self):
         return list(H_RANGE_DICT.keys())
 
-    def getObjectImage(self, image, color_mode="green"):
+    def setColorMode(self, color_mode):
         assert color_mode in H_RANGE_DICT.keys()
+        self.h_range_list = H_RANGE_DICT[color_mode]
+        return True
 
+    def setBackground(self, background_image_file_path):
+        assert os.path.exists(background_image_file_path)
+        background_image = cv2.imread(background_image_file_path)
+
+        background_hsv = cv2.cvtColor(background_image, cv2.COLOR_BGR2HSV)
+
+        h_min_list = [
+            np.min(background_hsv[:, :, 0]),
+            np.min(background_hsv[:, :, 1]),
+            np.min(background_hsv[:, :, 2])
+        ]
+        h_max_list = [
+            np.max(background_hsv[:, :, 0]),
+            np.max(background_hsv[:, :, 1]),
+            np.max(background_hsv[:, :, 2])
+        ]
+
+        background_h_range_list = [h_min_list, h_max_list]
+
+        print(self.h_range_list)
+        print(background_h_range_list)
+        # FIXME: use this to set background to cut image object
+        #  self.h_range_list = background_h_range_list
+        return True
+
+    def getObjectImage(self, image):
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
         #  cv2.imshow("test", hsv)
         #  cv2.waitKey(3000)
         #  print(hsv[0][0])
-        #  exit()
 
-        h_range_list = H_RANGE_DICT[color_mode]
-        mask = cv2.inRange(hsv, tuple(h_range_list[0]), tuple(h_range_list[1]))
+        mask = cv2.inRange(hsv, np.array(self.h_range_list[0]),
+                           np.array(self.h_range_list[1]))
 
         cv2.bitwise_not(mask, mask)
 
@@ -48,13 +85,12 @@ class ImageObjectCutter(object):
 
         return object_image
 
-    def getObjectImageFromImageFile(self, image_file_path, color_mode="green"):
+    def getObjectImageFromImageFile(self, image_file_path):
         assert os.path.exists(image_file_path)
-        assert color_mode in H_RANGE_DICT.keys()
 
         image = cv2.imread(image_file_path)
 
-        return self.getObjectImage(image, color_mode)
+        return self.getObjectImage(image)
 
     def cutImageFileObject(self,
                            image_file_path,
@@ -63,8 +99,7 @@ class ImageObjectCutter(object):
         assert os.path.exists(image_file_path)
         assert color_mode in H_RANGE_DICT.keys()
 
-        object_image = self.getObjectImageFromImageFile(
-            image_file_path, color_mode)
+        object_image = self.getObjectImageFromImageFile(image_file_path)
 
         createFileFolder(save_object_image_file_path)
 
@@ -74,7 +109,6 @@ class ImageObjectCutter(object):
     def cutImageFolderObject(self,
                              image_folder_path,
                              save_object_image_folder_path,
-                             color_mode="green",
                              print_progress=False):
         assert os.path.exists(image_folder_path)
         file_name_list = os.listdir(image_folder_path)
@@ -106,8 +140,7 @@ class ImageObjectCutter(object):
             tmp_save_object_image_file_path = save_object_image_file_path[:
                                                                           -4] + "_tmp.png"
             assert self.cutImageFileObject(image_file_path,
-                                           tmp_save_object_image_file_path,
-                                           color_mode)
+                                           tmp_save_object_image_file_path)
 
             renameFile(tmp_save_object_image_file_path,
                        save_object_image_file_path)
