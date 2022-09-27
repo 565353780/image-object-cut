@@ -24,6 +24,11 @@ class ImageObjectCutter(object):
 
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
+        #  cv2.imshow("test", hsv)
+        #  cv2.waitKey(3000)
+        #  print(hsv[0][0])
+        #  exit()
+
         h_range_list = H_RANGE_DICT[color_mode]
         mask = cv2.inRange(hsv, tuple(h_range_list[0]), tuple(h_range_list[1]))
 
@@ -92,7 +97,8 @@ class ImageObjectCutter(object):
             for_data = tqdm(for_data)
         for image_file_name in for_data:
             image_file_path = image_folder_path + image_file_name
-            save_object_image_file_path = save_object_image_folder_path + image_file_name.split(".")[0] + ".png"
+            save_object_image_file_path = save_object_image_folder_path + image_file_name.split(
+                ".")[0] + ".png"
 
             if os.path.exists(save_object_image_file_path):
                 continue
