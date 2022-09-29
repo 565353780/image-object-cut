@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+from multiprocessing import Pool
 
 import cv2
 import numpy as np
@@ -94,10 +95,8 @@ class ImageObjectCutter(object):
 
     def cutImageFileObject(self,
                            image_file_path,
-                           save_object_image_file_path,
-                           color_mode="green"):
+                           save_object_image_file_path):
         assert os.path.exists(image_file_path)
-        assert color_mode in H_RANGE_DICT.keys()
 
         object_image = self.getObjectImageFromImageFile(image_file_path)
 
@@ -105,6 +104,11 @@ class ImageObjectCutter(object):
 
         cv2.imwrite(save_object_image_file_path, object_image)
         return True
+
+    def cutImageFileObjectWithPool(self, inputs):
+        image_file_path, save_object_image_file_path = inputs
+        return self.cutImageFileObject(image_file_path,
+                                       save_object_image_file_path)
 
     def cutImageFolderObject(self,
                              image_folder_path,
@@ -123,6 +127,21 @@ class ImageObjectCutter(object):
             return True
 
         os.makedirs(save_object_image_folder_path, exist_ok=True)
+
+        pool = Pool(os.cpu_count())
+
+        inputs_list = []
+        for image_file_name in image_file_name_list:
+            image_file_path = image_folder_path + image_file_name
+            save_object_image_file_path = save_object_image_folder_path + image_file_name.split(
+                ".")[0] + ".png"
+            inputs = [image_file_path, save_object_image_file_path]
+            inputs_list.append(inputs)
+
+        pool.map(self.cutImageFileObjectWithPool, inputs_list)
+        pool.close()
+        pool.join()
+        return True
 
         for_data = image_file_name_list
         if print_progress:
